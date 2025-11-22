@@ -1,1 +1,60 @@
-<h1> Hello world </h1>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Matrix Password Canvas</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="stylesheet" href="style.css" />
+<script defer src="script.js"></script>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Matrix Password Canvas</h1>
+    <p class="subtitle">Generate random character grids to conceal or derive strong passwords by position.</p>
+  </header>
+
+  <section id="settings" class="panel">
+    <form id="matrixForm" autocomplete="off">
+      <div class="row duo">
+        <div class="field">
+          <label for="rows">Rows</label>
+          <input type="number" id="rows" name="rows" min="1" max="500" placeholder="e.g. 20" required />
+        </div>
+        <div class="field">
+          <label for="cols">Columns</label>
+          <input type="number" id="cols" name="cols" min="1" max="500" placeholder="e.g. 40" required />
+        </div>
+      </div>
+
+      <div class="row checks">
+        <div class="check-group">
+          <span class="group-title">Character Sources</span>
+          <label><input type="checkbox" id="letters" checked /> Letters (A–Z)</label>
+          <label><input type="checkbox" id="numbers" checked /> Numbers (0–9)</label>
+          <label><input type="checkbox" id="specials" /> Special (!@#$…)</label>
+        </div>
+        <div class="check-group">
+          <span class="group-title">Letter Case</span>
+          <label><input type="checkbox" id="uppercase" checked /> Uppercase</label>
+          <label><input type="checkbox" id="lowercase" checked /> Lowercase</label>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button type="submit" id="generateBtn" class="btn generate">Generate!</button>
+        <button type="button" id="resetBtn" class="btn reset hidden">Reset</button>
+      </div>
+    </form>
+  </section>
+
+  <main id="outputArea">
+    <!-- Generated matrices appear here -->
+  </main>
+
+  <footer>
+    <p>Use position-based memorization: remember coordinates, not the raw password.</p>
+  </footer>
+</div>
+</body>
+</html>
