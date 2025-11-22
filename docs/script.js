@@ -1,70 +1,89 @@
-// Configuration
+// ==== Configuration ====
 const SPECIAL_CHARS = "!@#$%^&*()-_=+[]{};:,.<>/?|~";
-const ANIMATION_DURATION_MS = 650; // time each generation 'scrambles'
-const TICK_INTERVAL_MS = 40;       // speed of scramble updates
-const MAX_SAFE_CELLS = 200_000;    // guard against excessive matrices
+const ANIMATION_DURATION_MS = 650;
+const TICK_INTERVAL_MS = 40;
+const MAX_SAFE_CELLS = 200_000;
 
-// Build character pool from options
+// ==== Pool Builder ====
 function buildPool(opts) {
   let pool = "";
   if (opts.letters) {
-    if (opts.uppercase) pool += "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    if (opts.lowercase) pool += "abcdefghijklmnopqrstuvwxyz";
-    // If letters checked but neither uppercase nor lowercase chosen, fallback both:
-    if (!opts.uppercase && !opts.lowercase) {
-      pool += "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-    }
+    let uc = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    let lc = "abcdefghijklmnopqrstuvwxyz";
+    if (opts.uppercase) pool += uc;
+    if (opts.lowercase) pool += lc;
+    if (!opts.uppercase && !opts.lowercase) pool += uc + lc; // fallback
   }
   if (opts.numbers) pool += "0123456789";
   if (opts.specials) pool += SPECIAL_CHARS;
   return pool;
 }
 
-// Generate a single matrix string (rows separated by newline)
-function generateMatrix(rows, cols, pool) {
-  const chars = [];
+// ==== Cell Size Helper ====
+function computeCellSize(cols) {
+  if (cols <= 20) return 36;
+  if (cols <= 30) return 30;
+  if (cols <= 45) return 26;
+  if (cols <= 60) return 22;
+  if (cols <= 80) return 18;
+  if (cols <= 100) return 16;
+  return 14;
+}
+
+// ==== Grid Construction ====
+function createGrid(rows, cols, container) {
+  container.style.setProperty("--cell-size", computeCellSize(cols) + "px");
+  container.style.gridTemplateColumns = `repeat(${cols}, var(--cell-size))`;
+  const cells = [];
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const cell = document.createElement("div");
+      cell.className = "cell";
+      cell.textContent = "•"; // placeholder
+      cell.dataset.row = r;
+      cell.dataset.col = c;
+      cells.push(cell);
+      container.appendChild(cell);
+    }
+  }
+  return cells;
+}
+
+// ==== Generation (final) ====
+function finalizeGrid(rows, cols, pool, cells) {
   const pLen = pool.length;
+  const lines = Array(rows).fill("").map(() => "");
+  let idx = 0;
   for (let r = 0; r < rows; r++) {
     let line = "";
     for (let c = 0; c < cols; c++) {
-      line += pool[Math.floor(Math.random() * pLen)];
+      const ch = pool[Math.floor(Math.random() * pLen)];
+      cells[idx].textContent = ch;
+      line += ch;
+      idx++;
     }
-    chars.push(line);
+    lines[r] = line;
   }
-  return chars.join("\n");
+  return lines.join("\n");
 }
 
-// Animated scramble into final matrix
-function animateMatrix(rows, cols, pool, displayEl, doneCallback) {
-  const totalCells = rows * cols;
-  if (totalCells === 0) {
-    doneCallback("");
-    return;
-  }
+// ==== Animation Scramble ====
+function animateGrid(rows, cols, pool, cells, doneCallback) {
   const pLen = pool.length;
   let start = performance.now();
   let lastTick = 0;
-  let finalString = "";
 
   function tick(now) {
     if (now - lastTick >= TICK_INTERVAL_MS) {
       // scramble frame
-      let lines = [];
-      for (let r = 0; r < rows; r++) {
-        let line = "";
-        for (let c = 0; c < cols; c++) {
-          line += pool[Math.floor(Math.random() * pLen)];
-        }
-        lines.push(line);
+      for (let i = 0; i < cells.length; i++) {
+        cells[i].textContent = pool[Math.floor(Math.random() * pLen)];
       }
-      displayEl.textContent = lines.join("\n");
       lastTick = now;
     }
     if (now - start >= ANIMATION_DURATION_MS) {
-      // Final stable matrix
-      finalString = generateMatrix(rows, cols, pool);
-      displayEl.textContent = finalString;
-      doneCallback(finalString);
+      const finalMatrix = finalizeGrid(rows, cols, pool, cells);
+      doneCallback(finalMatrix);
       return;
     }
     requestAnimationFrame(tick);
@@ -72,10 +91,11 @@ function animateMatrix(rows, cols, pool, displayEl, doneCallback) {
   requestAnimationFrame(tick);
 }
 
-// Create result block
-function createMatrixBlock(matrixText, index, meta) {
+// ==== Matrix Block Creation ====
+function createMatrixBlock(rows, cols, pool, matrixText, index) {
   const wrapper = document.createElement("article");
   wrapper.className = "matrix-wrapper";
+  wrapper.dataset.matrix = matrixText;
 
   const header = document.createElement("div");
   header.className = "matrix-header";
@@ -90,7 +110,8 @@ function createMatrixBlock(matrixText, index, meta) {
   copyBtn.textContent = "Copy";
 
   copyBtn.addEventListener("click", () => {
-    navigator.clipboard.writeText(matrixText)
+    const text = wrapper.dataset.matrix || "";
+    navigator.clipboard.writeText(text)
       .then(() => {
         copyBtn.textContent = "Copied!";
         setTimeout(() => copyBtn.textContent = "Copy", 1600);
@@ -107,22 +128,88 @@ function createMatrixBlock(matrixText, index, meta) {
   const metaLine = document.createElement("div");
   metaLine.className = "matrix-meta";
   metaLine.innerHTML = `
-    <span class="meta-item">Rows: ${meta.rows}</span>
-    <span class="meta-item">Columns: ${meta.cols}</span>
-    <span class="meta-item">Cells: ${meta.rows * meta.cols}</span>
-    <span class="meta-item">Pool size: ${meta.poolSize}</span>
+    <span class="meta-item">Rows: ${rows}</span>
+    <span class="meta-item">Columns: ${cols}</span>
+    <span class="meta-item">Cells: ${rows * cols}</span>
+    <span class="meta-item">Pool size: ${pool.length}</span>
   `;
 
-  const display = document.createElement("pre");
-  display.className = "matrix-display";
-  display.textContent = matrixText;
+  const scroll = document.createElement("div");
+  scroll.className = "matrix-scroll";
+
+  const grid = document.createElement("div");
+  grid.className = "matrix-grid";
+  scroll.appendChild(grid);
+
+  // Fill grid cells with final matrix text
+  const lines = matrixText.split("\n");
+  for (let r = 0; r < rows; r++) {
+    const line = lines[r];
+    for (let c = 0; c < cols; c++) {
+      const cell = document.createElement("div");
+      cell.className = "cell";
+      cell.textContent = line[c];
+      grid.appendChild(cell);
+    }
+  }
 
   wrapper.appendChild(header);
   wrapper.appendChild(metaLine);
-  wrapper.appendChild(display);
+  wrapper.appendChild(scroll);
   return wrapper;
 }
 
+// ==== Temporary (Scramble) Block ====
+function createTempBlock(rows, cols, pool) {
+  const wrapper = document.createElement("article");
+  wrapper.className = "matrix-wrapper";
+
+  const header = document.createElement("div");
+  header.className = "matrix-header";
+
+  const title = document.createElement("h2");
+  title.className = "matrix-title";
+  title.innerHTML = `Matrix <span class="badge">#?</span>`;
+
+  header.appendChild(title);
+  wrapper.appendChild(header);
+
+  const metaLine = document.createElement("div");
+  metaLine.className = "matrix-meta";
+  metaLine.innerHTML = `
+    <span class="meta-item">Rows: ${rows}</span>
+    <span class="meta-item">Columns: ${cols}</span>
+    <span class="meta-item">Cells: ${rows * cols}</span>
+    <span class="meta-item">Pool size: ${pool.length}</span>
+    <span class="meta-item">Generating…</span>
+  `;
+  wrapper.appendChild(metaLine);
+
+  const scroll = document.createElement("div");
+  scroll.className = "matrix-scroll";
+
+  const grid = document.createElement("div");
+  grid.className = "matrix-grid";
+  scroll.appendChild(grid);
+  wrapper.appendChild(scroll);
+
+  // Create cells once for animation
+  const cells = createGrid(rows, cols, grid);
+  return { wrapper, cells };
+}
+
+// ==== Validation ====
+function validateInt(inputEl) {
+  const val = parseInt(inputEl.value, 10);
+  if (isNaN(val) || val <= 0) {
+    inputEl.classList.add("invalid");
+    setTimeout(() => inputEl.classList.remove("invalid"), 420);
+    return null;
+  }
+  return val;
+}
+
+// ==== Main ====
 document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("matrixForm");
   const rowsInput = document.getElementById("rows");
@@ -132,19 +219,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const specialsCb = document.getElementById("specials");
   const uppercaseCb = document.getElementById("uppercase");
   const lowercaseCb = document.getElementById("lowercase");
-  const generateBtn = document.getElementById("generateBtn");
   const resetBtn = document.getElementById("resetBtn");
   const outputArea = document.getElementById("outputArea");
-
-  function validateInt(inputEl) {
-    const val = parseInt(inputEl.value, 10);
-    if (isNaN(val) || val <= 0) {
-      inputEl.classList.add("invalid");
-      setTimeout(() => inputEl.classList.remove("invalid"), 420);
-      return null;
-    }
-    return val;
-  }
 
   form.addEventListener("submit", (e) => {
     e.preventDefault();
@@ -152,9 +228,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const cols = validateInt(colsInput);
     if (rows === null || cols === null) return;
 
-    const cells = rows * cols;
-    if (cells > MAX_SAFE_CELLS) {
-      alert(`Matrix too large (${cells} cells). Please reduce size (limit ~ ${MAX_SAFE_CELLS}).`);
+    const cellsCount = rows * cols;
+    if (cellsCount > MAX_SAFE_CELLS) {
+      alert(`Matrix too large (${cellsCount} cells). Reduce size (limit ~ ${MAX_SAFE_CELLS}).`);
       return;
     }
 
@@ -167,56 +243,24 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     if (!pool.length) {
-      alert("Please select at least one character source (letters, numbers, specials).");
+      alert("Select at least one character source (letters, numbers, specials).");
       return;
     }
 
-    // Show reset button after first generation
     if (resetBtn.classList.contains("hidden")) {
       resetBtn.classList.remove("hidden");
     }
 
-    // Temporary block with animated scramble
-    const tempWrapper = document.createElement("article");
-    tempWrapper.className = "matrix-wrapper";
-    const header = document.createElement("div");
-    header.className = "matrix-header";
-    const h2 = document.createElement("h2");
-    h2.className = "matrix-title";
-    h2.innerHTML = `Matrix <span class="badge">#?</span>`;
-    header.appendChild(h2);
-    tempWrapper.appendChild(header);
-
-    const metaLine = document.createElement("div");
-    metaLine.className = "matrix-meta";
-    metaLine.innerHTML = `
-      <span class="meta-item">Rows: ${rows}</span>
-      <span class="meta-item">Columns: ${cols}</span>
-      <span class="meta-item">Cells: ${cells}</span>
-      <span class="meta-item">Pool size: ${pool.length}</span>
-      <span class="meta-item">Generating…</span>
-    `;
-    tempWrapper.appendChild(metaLine);
-
-    const display = document.createElement("pre");
-    display.className = "matrix-display";
-    display.textContent = "";
-    tempWrapper.appendChild(display);
-
+    // Temporary scramble block
+    const { wrapper: tempWrapper, cells } = createTempBlock(rows, cols, pool);
     outputArea.insertBefore(tempWrapper, outputArea.firstChild);
 
-    // Animate scramble then replace with final block
-    animateMatrix(rows, cols, pool, display, (finalMatrix) => {
-      // Remove temporary wrapper
+    animateGrid(rows, cols, pool, cells, (finalMatrix) => {
       tempWrapper.remove();
-
-      // Create final block
-      const finalBlock = createMatrixBlock(finalMatrix, 0, {
-        rows, cols, poolSize: pool.length
-      });
+      const finalBlock = createMatrixBlock(rows, cols, pool, finalMatrix, 0);
       outputArea.insertBefore(finalBlock, outputArea.firstChild);
 
-      // Update badges for existing blocks
+      // Update badge numbering
       const blocks = [...outputArea.querySelectorAll(".matrix-wrapper")];
       blocks.forEach((blk, idx) => {
         const badge = blk.querySelector(".badge");
